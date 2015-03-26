@@ -14,9 +14,15 @@ module System.Posix.MMan
   , mincore
 
   , Protection
-  , pattern ProtNone, pattern ProtRead, pattern ProtWrite, pattern ProtExec
+  , pattern ProtNone
+  , pattern ProtRead
+  , pattern ProtWrite
+  , pattern ProtExec
+
   , Sharing
-  , pattern MapShared, pattern MapPrivate
+  , pattern MapShared
+  , pattern MapPrivate
+
   , Residency
   , pattern InCore
   , pattern Referenced
@@ -100,5 +106,6 @@ mincore ptr size = do
   fptr <- mallocForeignPtrBytes len
   withForeignPtr fptr $ \p ->
     throwErrnoIf_ (/= 0) "mincore" $
-      {# call mincore as c_mincore #} (castPtr ptr) (fromIntegral len) (castPtr p)
+      {# call mincore as c_mincore #}
+        (castPtr ptr) (fromIntegral len) (castPtr p)
   return $! V.unsafeFromForeignPtr0 fptr len
