@@ -18,6 +18,11 @@ module System.Posix.MMan
   , Sharing
   , pattern MapShared, pattern MapPrivate
   , Residency
+  , pattern InCore
+  , pattern Referenced
+  , pattern Modified
+  , pattern ReferencedOther
+  , pattern ModifiedOther
   ) where
 
 import Data.Monoid
@@ -54,11 +59,11 @@ newtype Residency = Residency CChar deriving Storable
 instance Show Residency where
   show (Residency n) = show n
 
--- pattern InCore <-
--- pattern Referenced <-
--- pattern Modified <-
--- pattern ReferencedOther <-
--- pattern ModifiedOther <-
+pattern InCore = Residency {# const MINCORE_INCORE #}
+pattern Referenced = Residency {# const MINCORE_REFERENCED #}
+pattern Modified = Residency {# const MINCORE_MODIFIED #}
+pattern ReferencedOther = Residency {# const MINCORE_REFERENCED_OTHER #}
+pattern ModifiedOther = Residency {# const MINCORE_MODIFIED_OTHER #}
 
 mmap
   :: Ptr a
