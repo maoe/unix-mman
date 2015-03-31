@@ -64,13 +64,12 @@ isProtRead (Protection p) = p .&. unProtection protRead > 0
 isProtWrite (Protection p) = p .&. unProtection protWrite > 0
 isProtExec (Protection p) = p .&. unProtection protExec > 0
 
-newtype Sharing = Sharing CInt
-  deriving (Eq, Num, Enum, Ord, Real, Integral)
+newtype Sharing = Sharing { unSharing :: CInt }
 
 pattern MapShared = Sharing {# const MAP_SHARED #}
 pattern MapPrivate = Sharing {# const MAP_PRIVATE #}
 
-newtype Residency = Residency CChar deriving Storable
+newtype Residency = Residency { unResidency :: CUChar } deriving Storable
 
 instance Show Residency where
   show (Residency n) = show n
@@ -95,7 +94,7 @@ mmap ptr size protection sharing fd offset = do
       (castPtr ptr)
       (fromIntegral size)
       (unProtection protection)
-      (fromIntegral sharing)
+      (unSharing sharing)
       (fromIntegral fd)
       (fromIntegral offset)
   return $! castPtr p
