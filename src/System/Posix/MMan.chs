@@ -14,10 +14,14 @@ module System.Posix.MMan
   , mincore
 
   , Protection
-  , pattern ProtNone
-  , pattern ProtRead
-  , pattern ProtWrite
-  , pattern ProtExec
+  , protNone
+  , protRead
+  , protWrite
+  , protExec
+  , isProtNone
+  , isProtRead
+  , isProtWrite
+  , isProtExec
 
   , Sharing
   , pattern MapShared
@@ -42,17 +46,23 @@ import qualified Data.Vector.Storable as V
 #include <sys/mman.h>
 #include <unistd.h>
 
-newtype Protection = Protection CInt
-  deriving (Eq, Num, Enum, Ord, Real, Integral)
+newtype Protection = Protection { unProtection :: CInt } deriving Eq
 
 instance Monoid Protection where
-  mempty = ProtNone
+  mempty = protNone
   mappend (Protection p1) (Protection p2) = Protection (p1 .|. p2)
 
-pattern ProtNone = Protection {# const PROT_NONE #}
-pattern ProtRead = Protection {# const PROT_READ #}
-pattern ProtWrite = Protection {# const PROT_WRITE #}
-pattern ProtExec = Protection {# const PROT_EXEC #}
+protNone, protRead, protWrite, protExec :: Protection
+protNone = Protection {# const PROT_NONE #}
+protRead = Protection {# const PROT_READ #}
+protWrite = Protection {# const PROT_WRITE #}
+protExec = Protection {# const PROT_EXEC #}
+
+isProtNone, isProtRead, isProtWrite, isProtExec :: Protection -> Bool
+isProtNone p = p == protNone
+isProtRead (Protection p) = p .&. unProtection protRead > 0
+isProtWrite (Protection p) = p .&. unProtection protWrite > 0
+isProtExec (Protection p) = p .&. unProtection protExec > 0
 
 newtype Sharing = Sharing CInt
   deriving (Eq, Num, Enum, Ord, Real, Integral)
@@ -84,7 +94,7 @@ mmap ptr size protection sharing fd offset = do
     {# call mmap as c_mmap #}
       (castPtr ptr)
       (fromIntegral size)
-      (fromIntegral protection)
+      (unProtection protection)
       (fromIntegral sharing)
       (fromIntegral fd)
       (fromIntegral offset)
