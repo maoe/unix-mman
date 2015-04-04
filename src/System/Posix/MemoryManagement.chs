@@ -148,10 +148,10 @@ munmap ptr size = throwErrnoIfMinus1_ "munmap" $
 mincore :: Ptr a -> CSize -> IO (Vector Residency)
 mincore ptr size = do
   pageSize <- {# call sysconf #} {# const _SC_PAGESIZE #}
-  let !len = fromIntegral $ (fromIntegral size + pageSize - 1) `div` pageSize
-  fptr <- mallocForeignPtrBytes len
+  let !pages = fromIntegral $ (fromIntegral size + pageSize - 1) `div` pageSize
+  fptr <- mallocForeignPtrBytes pages
   withForeignPtr fptr $ \p ->
     throwErrnoIf_ (/= 0) "mincore" $
       {# call mincore as _mincore #}
         (castPtr ptr) (fromIntegral size) (castPtr p)
-  return $! V.unsafeFromForeignPtr0 fptr len
+  return $! V.unsafeFromForeignPtr0 fptr pages
