@@ -10,7 +10,7 @@ module System.Posix.MemoryManagement
   , mlock
   , munlock
   , mprotect
-  -- , msync
+  , msync
   , mincore
 
   , Protection
@@ -29,6 +29,11 @@ module System.Posix.MemoryManagement
   , pattern Modified
   , pattern ReferencedOther
   , pattern ModifiedOther
+
+  , SyncFlags
+  , pattern Async
+  , pattern Sync
+  , pattern Invalidate
   ) where
 
 import Foreign
@@ -168,3 +173,30 @@ mprotect :: Ptr a -> CSize -> Protection -> IO ()
 mprotect ptr size protection = throwErrnoIfMinus1_ "mprotect" $
   {# call mprotect as _mprotect #}
     (castPtr ptr) (fromIntegral size) (unProtection protection)
+
+newtype SyncFlags = SyncFlags { unSyncFlags :: CInt }
+
+pattern Async :: SyncFlags
+pattern Async <- ((\flags -> unSyncFlags flags .&. _MS_ASYNC > 0) -> True)
+  where
+    Async = SyncFlags _MS_ASYNC
+
+pattern Sync :: SyncFlags
+pattern Sync <- ((\flags -> unSyncFlags flags .&. _MS_SYNC > 0) -> True)
+  where
+    Sync = SyncFlags _MS_SYNC
+
+pattern Invalidate :: SyncFlags
+pattern Invalidate <-
+  ((\flags -> unSyncFlags flags .&. _MS_INVALIDATE > 0) -> True)
+  where
+    Invalidate = SyncFlags _MS_INVALIDATE
+
+_MS_ASYNC, _MS_SYNC, _MS_INVALIDATE :: CInt
+_MS_ASYNC = {# const MS_ASYNC #}
+_MS_SYNC = {# const MS_SYNC #}
+_MS_INVALIDATE = {# const MS_INVALIDATE #}
+
+msync :: Ptr a -> CSize -> SyncFlags -> IO ()
+msync ptr size flags = throwErrnoIfMinus1_ "msync" $
+  {# call msync as _msync #} (castPtr ptr) (fromIntegral size) (unSyncFlags flags)
