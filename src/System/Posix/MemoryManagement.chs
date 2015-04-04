@@ -152,6 +152,6 @@ mincore ptr size = do
   fptr <- mallocForeignPtrBytes len
   withForeignPtr fptr $ \p ->
     throwErrnoIf_ (/= 0) "mincore" $
-      {# call mincore as c_mincore #}
-        (castPtr ptr) (fromIntegral len) (castPtr p)
+      {# call mincore as _mincore #}
+        (castPtr ptr) (fromIntegral size) (castPtr p)
   return $! V.unsafeFromForeignPtr0 fptr len
