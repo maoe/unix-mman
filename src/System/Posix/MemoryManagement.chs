@@ -3,7 +3,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
-module System.Posix.MMan
+module System.Posix.MemoryManagement
   ( mmap
   , munmap
   -- , madvice
