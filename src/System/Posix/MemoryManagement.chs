@@ -7,8 +7,8 @@ module System.Posix.MemoryManagement
   ( mmap
   , munmap
   -- , madvice
-  -- , mlock
-  -- , munlock
+  , mlock
+  , munlock
   -- , mprotect
   -- , msync
   , mincore
@@ -155,3 +155,11 @@ mincore ptr size = do
       {# call mincore as _mincore #}
         (castPtr ptr) (fromIntegral size) (castPtr p)
   return $! V.unsafeFromForeignPtr0 fptr pages
+
+mlock :: Ptr a -> CSize -> IO ()
+mlock ptr size = throwErrnoIfMinus1_ "mlock" $
+  {# call mlock as _mlock #} (castPtr ptr) (fromIntegral size)
+
+munlock :: Ptr a -> CSize -> IO ()
+munlock ptr size = throwErrnoIfMinus1_ "munlock" $
+  {# call munlock as _munlock #} (castPtr ptr) (fromIntegral size)
