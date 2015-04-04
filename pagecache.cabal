@@ -29,7 +29,6 @@ executable pagecache
   main-is: pagecache.hs
   build-depends:
       base
-    , mmap
     , unix
     , pagecache
     , vector
