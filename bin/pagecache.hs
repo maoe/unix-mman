@@ -20,7 +20,7 @@ residency :: FilePath -> IO (Vector Residency)
 residency path = bracket open close $ \fd -> do
   (fromIntegral . fileSize -> size) <- getFdStatus fd
   bracket
-    (mmap nullPtr size protNone MapShared fd 0)
+    (mmap nullPtr size ProtNone MapShared fd 0)
     (flip munmap size)
     (flip mincore size)
   where
