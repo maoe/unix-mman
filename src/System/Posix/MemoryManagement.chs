@@ -126,8 +126,8 @@ mmap
   -> COff
   -> IO (Ptr a)
 mmap ptr size protection sharing fd offset = do
-  p <- throwErrnoIf (== c_MAP_FAILED) "mmap" $
-    {# call mmap as c_mmap #}
+  p <- throwErrnoIf (== _MAP_FAILED) "mmap" $
+    {# call mmap as _mmap #}
       (castPtr ptr)
       (fromIntegral size)
       (unProtection protection)
@@ -136,14 +136,14 @@ mmap ptr size protection sharing fd offset = do
       (fromIntegral offset)
   return $! castPtr p
 
-foreign import capi "sys/mman.h value MAP_FAILED" c_MAP_FAILED :: Ptr a
+foreign import capi "sys/mman.h value MAP_FAILED" _MAP_FAILED :: Ptr a
 
 munmap
   :: Ptr a
   -> CSize
   -> IO ()
 munmap ptr size = throwErrnoIfMinus1_ "munmap" $
-  {# call munmap as c_munmap #} (castPtr ptr) (fromIntegral size)
+  {# call munmap as _munmap #} (castPtr ptr) (fromIntegral size)
 
 mincore :: Ptr a -> CSize -> IO (Vector Residency)
 mincore ptr size = do
