@@ -9,7 +9,7 @@ import Data.Vector.Storable (Vector)
 import System.Posix.Files
 import System.Posix.IO
 
-import System.Posix.MMan
+import System.Posix.MemoryManagement
 
 main :: IO ()
 main = do

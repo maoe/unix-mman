@@ -14,7 +14,7 @@ cabal-version: >= 1.10
 
 library
   exposed-modules:
-    System.Posix.MMan
+    System.Posix.MemoryManagement
   build-depends:
       base >= 4.8 && < 4.9
     , unix
