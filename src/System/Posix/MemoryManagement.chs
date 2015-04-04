@@ -6,7 +6,8 @@
 module System.Posix.MemoryManagement
   ( mmap
   , munmap
-  -- , madvice
+  , madvise
+  , posixMadvise
   , mlock
   , munlock
   , mprotect
@@ -22,6 +23,9 @@ module System.Posix.MemoryManagement
   , Sharing
   , pattern MapShared
   , pattern MapPrivate
+
+  , Advice(..)
+  , PosixAdvice(..)
 
   , Residency
   , pattern InCore
@@ -152,6 +156,38 @@ munmap
   -> IO ()
 munmap ptr size = throwErrnoIfMinus1_ "munmap" $
   {# call munmap as _munmap #} (castPtr ptr) (fromIntegral size)
+
+{# enum define Advice
+  { MADV_NORMAL as MADV_NORMAL
+  , MADV_SEQUENTIAL as MADV_SEQUENTIAL
+  , MADV_RANDOM as MADV_RANDOM
+  , MADV_WILLNEED as MADV_WILLNEED
+  , MADV_DONTNEED as MADV_DONTNEED
+  , MADV_FREE as MADV_FREE
+  , MADV_ZERO_WIRED_PAGES as MADV_ZERO_WIRED_PAGES
+  } deriving (Eq, Show)
+  #}
+
+{# enum define PosixAdvice
+  { POSIX_MADV_NORMAL as POSIX_MADV_NORMAL
+  , POSIX_MADV_SEQUENTIAL as POSIX_MADV_SEQUENTIAL
+  , POSIX_MADV_RANDOM as POSIX_MADV_RANDOM
+  , POSIX_MADV_WILLNEED as POSIX_MADV_WILLNEED
+  , POSIX_MADV_DONTNEED as POSIX_MADV_DONTNEED
+  } deriving (Eq, Show)
+  #}
+
+madvise :: Ptr a -> CSize -> Advice -> IO ()
+madvise ptr size advice =
+  throwErrnoIfMinus1_ "madvise" $
+    {# call madvise as _madvise #}
+      (castPtr ptr) (fromIntegral size) (fromIntegral (fromEnum advice))
+
+posixMadvise :: Ptr a -> CSize -> PosixAdvice -> IO ()
+posixMadvise ptr size advice =
+  throwErrnoIfMinus1_ "posix_madvise" $
+    {# call posix_madvise as _posix_madvise #}
+      (castPtr ptr) (fromIntegral size) (fromIntegral (fromEnum advice))
 
 mincore :: Ptr a -> CSize -> IO (Vector Residency)
 mincore ptr size = do
