@@ -9,7 +9,7 @@ module System.Posix.MemoryManagement
   -- , madvice
   , mlock
   , munlock
-  -- , mprotect
+  , mprotect
   -- , msync
   , mincore
 
@@ -163,3 +163,8 @@ mlock ptr size = throwErrnoIfMinus1_ "mlock" $
 munlock :: Ptr a -> CSize -> IO ()
 munlock ptr size = throwErrnoIfMinus1_ "munlock" $
   {# call munlock as _munlock #} (castPtr ptr) (fromIntegral size)
+
+mprotect :: Ptr a -> CSize -> Protection -> IO ()
+mprotect ptr size protection = throwErrnoIfMinus1_ "mprotect" $
+  {# call mprotect as _mprotect #}
+    (castPtr ptr) (fromIntegral size) (unProtection protection)
