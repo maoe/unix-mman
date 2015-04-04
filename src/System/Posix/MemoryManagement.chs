@@ -15,29 +15,27 @@ module System.Posix.MemoryManagement
   , mincore
 
   , Protection
-  , pattern ProtNone
-  , pattern ProtRead
-  , pattern ProtWrite
-  , pattern ProtExec
+  , pattern PROT_NONE
+  , pattern PROT_READ
+  , pattern PROT_WRITE
+  , pattern PROT_EXEC
 
-  , Sharing
-  , pattern MapShared
-  , pattern MapPrivate
+  , Sharing(..)
 
   , Advice(..)
   , PosixAdvice(..)
 
   , Residency
-  , pattern InCore
-  , pattern Referenced
-  , pattern Modified
-  , pattern ReferencedOther
-  , pattern ModifiedOther
+  , pattern MINCORE_INCORE
+  , pattern MINCORE_REFERENCED
+  , pattern MINCORE_MODIFIED
+  , pattern MINCORE_REFERENCED_OTHER
+  , pattern MINCORE_MODIFIED_OTHER
 
   , SyncFlags
-  , pattern Async
-  , pattern Sync
-  , pattern Invalidate
+  , pattern MS_ASYNC
+  , pattern MS_SYNC
+  , pattern MS_INVALIDATE
   ) where
 
 import Foreign
@@ -53,28 +51,28 @@ import qualified Data.Vector.Storable as V
 newtype Protection = Protection { unProtection :: CInt } deriving Eq
 
 instance Monoid Protection where
-  mempty = ProtNone
+  mempty = PROT_NONE
   mappend (Protection p1) (Protection p2) = Protection (p1 .|. p2)
 
-pattern ProtNone :: Protection
-pattern ProtNone <- ((\p -> unProtection p .&. _PROT_NONE > 0) -> True)
+pattern PROT_NONE :: Protection
+pattern PROT_NONE <- ((\p -> unProtection p .&. _PROT_NONE > 0) -> True)
   where
-    ProtNone = Protection _PROT_NONE
+    PROT_NONE = Protection _PROT_NONE
 
-pattern ProtRead :: Protection
-pattern ProtRead <- ((\p -> unProtection p .&. _PROT_READ > 0) -> True)
+pattern PROT_READ :: Protection
+pattern PROT_READ <- ((\p -> unProtection p .&. _PROT_READ > 0) -> True)
   where
-    ProtRead = Protection _PROT_READ
+    PROT_READ = Protection _PROT_READ
 
-pattern ProtWrite :: Protection
-pattern ProtWrite <- ((\p -> unProtection p .&. _PROT_WRITE > 0) -> True)
+pattern PROT_WRITE :: Protection
+pattern PROT_WRITE <- ((\p -> unProtection p .&. _PROT_WRITE > 0) -> True)
   where
-    ProtWrite = Protection _PROT_WRITE
+    PROT_WRITE = Protection _PROT_WRITE
 
-pattern ProtExec :: Protection
-pattern ProtExec <- ((\p -> unProtection p .&. _PROT_EXEC > 0) -> True)
+pattern PROT_EXEC :: Protection
+pattern PROT_EXEC <- ((\p -> unProtection p .&. _PROT_EXEC > 0) -> True)
   where
-    ProtExec = Protection _PROT_EXEC
+    PROT_EXEC = Protection _PROT_EXEC
 
 _PROT_NONE, _PROT_READ, _PROT_WRITE, _PROT_EXEC :: CInt
 _PROT_NONE = {# const PROT_NONE #}
@@ -82,50 +80,56 @@ _PROT_READ = {# const PROT_READ #}
 _PROT_WRITE = {# const PROT_WRITE #}
 _PROT_EXEC = {# const PROT_EXEC #}
 
-newtype Sharing = Sharing { unSharing :: CInt }
+{# enum define Sharing
+  { MAP_SHARED as MAP_SHARED
+  , MAP_PRIVATE as MAP_PRIVATE
+  } deriving (Eq, Show)
+  #}
 
-pattern MapShared = Sharing {# const MAP_SHARED #}
-pattern MapPrivate = Sharing {# const MAP_PRIVATE #}
+unSharing :: Sharing -> CInt
+unSharing = fromIntegral . fromEnum
 
 newtype Residency = Residency { unResidency :: CUChar } deriving Storable
 
 instance Show Residency where
   show (Residency n) = show n
 
-pattern InCore :: Residency
-pattern InCore <-
+pattern MINCORE_INCORE :: Residency
+pattern MINCORE_INCORE <-
   ((\r -> unResidency r .&. _MINCORE_INCORE > 0) -> True)
   where
-    InCore = Residency _MINCORE_INCORE
+    MINCORE_INCORE = Residency _MINCORE_INCORE
 
-pattern Referenced :: Residency
-pattern Referenced <-
+pattern MINCORE_REFERENCED :: Residency
+pattern MINCORE_REFERENCED <-
   ((\r -> unResidency r .&. _MINCORE_REFERENCED > 0) -> True)
   where
-    Referenced = Residency _MINCORE_REFERENCED
+    MINCORE_REFERENCED = Residency _MINCORE_REFERENCED
 
-pattern Modified :: Residency
-pattern Modified <-
+pattern MINCORE_MODIFIED :: Residency
+pattern MINCORE_MODIFIED <-
   ((\r -> unResidency r .&. _MINCORE_MODIFIED > 0) -> True)
   where
-    Modified = Residency _MINCORE_MODIFIED
+    MINCORE_MODIFIED = Residency _MINCORE_MODIFIED
 
-pattern ReferencedOther :: Residency
-pattern ReferencedOther <-
+pattern MINCORE_REFERENCED_OTHER :: Residency
+pattern MINCORE_REFERENCED_OTHER <-
   ((\r -> unResidency r .&. _MINCORE_REFERENCED_OTHER > 0) -> True)
   where
-    ReferencedOther = Residency _MINCORE_REFERENCED_OTHER
+    MINCORE_REFERENCED_OTHER = Residency _MINCORE_REFERENCED_OTHER
 
-pattern ModifiedOther :: Residency
-pattern ModifiedOther <-
+pattern MINCORE_MODIFIED_OTHER :: Residency
+pattern MINCORE_MODIFIED_OTHER <-
   ((\r -> unResidency r .&. _MINCORE_MODIFIED_OTHER > 0) -> True)
   where
-    ModifiedOther = Residency _MINCORE_MODIFIED_OTHER
+    MINCORE_MODIFIED_OTHER = Residency _MINCORE_MODIFIED_OTHER
 
 _MINCORE_INCORE :: CUChar
 _MINCORE_INCORE = {# const MINCORE_INCORE #}
+_MINCORE_REFERENCED, _MINCORE_MODIFIED :: CUChar
 _MINCORE_REFERENCED = {# const MINCORE_REFERENCED #}
 _MINCORE_MODIFIED = {# const MINCORE_MODIFIED #}
+_MINCORE_REFERENCED_OTHER, _MINCORE_MODIFIED_OTHER :: CUChar
 _MINCORE_REFERENCED_OTHER = {# const MINCORE_REFERENCED_OTHER #}
 _MINCORE_MODIFIED_OTHER = {# const MINCORE_MODIFIED_OTHER #}
 
@@ -215,21 +219,21 @@ mprotect ptr size protection = throwErrnoIfMinus1_ "mprotect" $
 
 newtype SyncFlags = SyncFlags { unSyncFlags :: CInt }
 
-pattern Async :: SyncFlags
-pattern Async <- ((\flags -> unSyncFlags flags .&. _MS_ASYNC > 0) -> True)
+pattern MS_ASYNC :: SyncFlags
+pattern MS_ASYNC <- ((\flags -> unSyncFlags flags .&. _MS_ASYNC > 0) -> True)
   where
-    Async = SyncFlags _MS_ASYNC
+    MS_ASYNC = SyncFlags _MS_ASYNC
 
-pattern Sync :: SyncFlags
-pattern Sync <- ((\flags -> unSyncFlags flags .&. _MS_SYNC > 0) -> True)
+pattern MS_SYNC :: SyncFlags
+pattern MS_SYNC <- ((\flags -> unSyncFlags flags .&. _MS_SYNC > 0) -> True)
   where
-    Sync = SyncFlags _MS_SYNC
+    MS_SYNC = SyncFlags _MS_SYNC
 
-pattern Invalidate :: SyncFlags
-pattern Invalidate <-
+pattern MS_INVALIDATE :: SyncFlags
+pattern MS_INVALIDATE <-
   ((\flags -> unSyncFlags flags .&. _MS_INVALIDATE > 0) -> True)
   where
-    Invalidate = SyncFlags _MS_INVALIDATE
+    MS_INVALIDATE = SyncFlags _MS_INVALIDATE
 
 _MS_ASYNC, _MS_SYNC, _MS_INVALIDATE :: CInt
 _MS_ASYNC = {# const MS_ASYNC #}
@@ -238,4 +242,5 @@ _MS_INVALIDATE = {# const MS_INVALIDATE #}
 
 msync :: Ptr a -> CSize -> SyncFlags -> IO ()
 msync ptr size flags = throwErrnoIfMinus1_ "msync" $
-  {# call msync as _msync #} (castPtr ptr) (fromIntegral size) (unSyncFlags flags)
+  {# call msync as _msync #}
+    (castPtr ptr) (fromIntegral size) (unSyncFlags flags)
