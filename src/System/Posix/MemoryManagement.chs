@@ -53,30 +53,30 @@ instance Monoid Protection where
   mappend (Protection p1) (Protection p2) = Protection (p1 .|. p2)
 
 pattern ProtNone :: Protection
-pattern ProtNone <- ((\p -> unProtection p .&. _protNone > 0) -> True)
+pattern ProtNone <- ((\p -> unProtection p .&. _PROT_NONE > 0) -> True)
   where
-    ProtNone = Protection _protNone
+    ProtNone = Protection _PROT_NONE
 
 pattern ProtRead :: Protection
-pattern ProtRead <- ((\p -> unProtection p .&. _protRead > 0) -> True)
+pattern ProtRead <- ((\p -> unProtection p .&. _PROT_READ > 0) -> True)
   where
-    ProtRead = Protection _protRead
+    ProtRead = Protection _PROT_READ
 
 pattern ProtWrite :: Protection
-pattern ProtWrite <- ((\p -> unProtection p .&. _protWrite > 0) -> True)
+pattern ProtWrite <- ((\p -> unProtection p .&. _PROT_WRITE > 0) -> True)
   where
-    ProtWrite = Protection _protWrite
+    ProtWrite = Protection _PROT_WRITE
 
 pattern ProtExec :: Protection
-pattern ProtExec <- ((\p -> unProtection p .&. _protExec > 0) -> True)
+pattern ProtExec <- ((\p -> unProtection p .&. _PROT_EXEC > 0) -> True)
   where
-    ProtExec = Protection _protExec
+    ProtExec = Protection _PROT_EXEC
 
-_protNone, _protRead, _protWrite, _protExec :: CInt
-_protNone = {# const PROT_NONE #}
-_protRead = {# const PROT_READ #}
-_protWrite = {# const PROT_WRITE #}
-_protExec = {# const PROT_EXEC #}
+_PROT_NONE, _PROT_READ, _PROT_WRITE, _PROT_EXEC :: CInt
+_PROT_NONE = {# const PROT_NONE #}
+_PROT_READ = {# const PROT_READ #}
+_PROT_WRITE = {# const PROT_WRITE #}
+_PROT_EXEC = {# const PROT_EXEC #}
 
 newtype Sharing = Sharing { unSharing :: CInt }
 
@@ -89,38 +89,41 @@ instance Show Residency where
   show (Residency n) = show n
 
 pattern InCore :: Residency
-pattern InCore <- ((\r -> unResidency r .&. _inCore > 0) -> True)
+pattern InCore <-
+  ((\r -> unResidency r .&. _MINCORE_INCORE > 0) -> True)
   where
-    InCore = Residency _inCore
+    InCore = Residency _MINCORE_INCORE
 
 pattern Referenced :: Residency
-pattern Referenced <- ((\r -> unResidency r .&. _referenced > 0) -> True)
+pattern Referenced <-
+  ((\r -> unResidency r .&. _MINCORE_REFERENCED > 0) -> True)
   where
-    Referenced = Residency _referenced
+    Referenced = Residency _MINCORE_REFERENCED
 
 pattern Modified :: Residency
-pattern Modified <- ((\r -> unResidency r .&. _modified > 0) -> True)
+pattern Modified <-
+  ((\r -> unResidency r .&. _MINCORE_MODIFIED > 0) -> True)
   where
-    Modified = Residency _modified
+    Modified = Residency _MINCORE_MODIFIED
 
 pattern ReferencedOther :: Residency
 pattern ReferencedOther <-
-  ((\r -> unResidency r .&. _referencedOther > 0) -> True)
+  ((\r -> unResidency r .&. _MINCORE_REFERENCED_OTHER > 0) -> True)
   where
-    ReferencedOther = Residency _referencedOther
+    ReferencedOther = Residency _MINCORE_REFERENCED_OTHER
 
 pattern ModifiedOther :: Residency
 pattern ModifiedOther <-
-  ((\r -> unResidency r .&. _modifiedOther > 0) -> True)
+  ((\r -> unResidency r .&. _MINCORE_MODIFIED_OTHER > 0) -> True)
   where
-    ModifiedOther = Residency _modifiedOther
+    ModifiedOther = Residency _MINCORE_MODIFIED_OTHER
 
-_inCore, _referenced, _modified, _referencedOther, _modifiedOther :: CUChar
-_inCore = {# const MINCORE_INCORE #}
-_referenced = {# const MINCORE_REFERENCED #}
-_modified = {# const MINCORE_MODIFIED #}
-_referencedOther = {# const MINCORE_REFERENCED_OTHER #}
-_modifiedOther = {# const MINCORE_MODIFIED_OTHER #}
+_MINCORE_INCORE :: CUChar
+_MINCORE_INCORE = {# const MINCORE_INCORE #}
+_MINCORE_REFERENCED = {# const MINCORE_REFERENCED #}
+_MINCORE_MODIFIED = {# const MINCORE_MODIFIED #}
+_MINCORE_REFERENCED_OTHER = {# const MINCORE_REFERENCED_OTHER #}
+_MINCORE_MODIFIED_OTHER = {# const MINCORE_MODIFIED_OTHER #}
 
 mmap
   :: Ptr a
