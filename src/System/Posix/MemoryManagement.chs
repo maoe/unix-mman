@@ -4,7 +4,9 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 module System.Posix.MemoryManagement
-  ( mmap
+  (
+  -- * System calls
+    mmap
   , munmap
   , madvise
   , posixMadvise
@@ -14,13 +16,14 @@ module System.Posix.MemoryManagement
   , msync
   , mincore
 
+  -- * Constants and patterns
   , Protection
   , pattern PROT_NONE
   , pattern PROT_READ
   , pattern PROT_WRITE
   , pattern PROT_EXEC
 
-  , Sharing
+  , MapFlags
   , pattern MAP_SHARED
   , pattern MAP_PRIVATE
 
@@ -63,29 +66,34 @@ import qualified Data.Vector.Storable as V
 #include <sys/mman.h>
 #include <unistd.h>
 
-newtype Protection = Protection { unProtection :: CInt } deriving Eq
+-- | Region accessibility.
+newtype Protection = Protection CInt deriving Eq
 
 instance Monoid Protection where
   mempty = PROT_NONE
   mappend (Protection p1) (Protection p2) = Protection (p1 .|. p2)
 
+-- | No permissions at all.
 pattern PROT_NONE :: Protection
-pattern PROT_NONE <- ((\p -> unProtection p .&. _PROT_NONE > 0) -> True)
+pattern PROT_NONE <- ((\(Protection n) -> n .&. _PROT_NONE > 0) -> True)
   where
     PROT_NONE = Protection _PROT_NONE
 
+-- | The pages can be read.
 pattern PROT_READ :: Protection
-pattern PROT_READ <- ((\p -> unProtection p .&. _PROT_READ > 0) -> True)
+pattern PROT_READ <- ((\(Protection n) -> n .&. _PROT_READ > 0) -> True)
   where
     PROT_READ = Protection _PROT_READ
 
+-- | The pages can be written.
 pattern PROT_WRITE :: Protection
-pattern PROT_WRITE <- ((\p -> unProtection p .&. _PROT_WRITE > 0) -> True)
+pattern PROT_WRITE <- ((\(Protection n) -> n .&. _PROT_WRITE > 0) -> True)
   where
     PROT_WRITE = Protection _PROT_WRITE
 
+-- | The pages can be executed.
 pattern PROT_EXEC :: Protection
-pattern PROT_EXEC <- ((\p -> unProtection p .&. _PROT_EXEC > 0) -> True)
+pattern PROT_EXEC <- ((\(Protection n) -> n .&. _PROT_EXEC > 0) -> True)
   where
     PROT_EXEC = Protection _PROT_EXEC
 
@@ -95,46 +103,53 @@ _PROT_READ = {# const PROT_READ #}
 _PROT_WRITE = {# const PROT_WRITE #}
 _PROT_EXEC = {# const PROT_EXEC #}
 
-newtype Sharing = Sharing { unSharing :: CInt } deriving (Eq, Show)
+newtype MapFlags = MapFlags CInt deriving (Eq, Show)
 
-pattern MAP_SHARED :: Sharing
-pattern MAP_SHARED = Sharing {# const MAP_SHARED #}
+-- POSIX.1-2001 flags
 
-pattern MAP_PRIVATE :: Sharing
-pattern MAP_PRIVATE = Sharing {# const MAP_PRIVATE #}
+pattern MAP_SHARED :: MapFlags
+pattern MAP_SHARED = MapFlags {# const MAP_SHARED #}
 
-newtype Residency = Residency { unResidency :: CUChar } deriving Storable
+pattern MAP_PRIVATE :: MapFlags
+pattern MAP_PRIVATE = MapFlags {# const MAP_PRIVATE #}
+
+newtype Residency = Residency CUChar deriving Storable
 
 instance Show Residency where
   show (Residency n) = show n
 
+-- | Page is incore.
 pattern MINCORE_INCORE :: Residency
 pattern MINCORE_INCORE <-
-  ((\r -> unResidency r .&. _MINCORE_INCORE > 0) -> True)
+  ((\(Residency c) -> c .&. _MINCORE_INCORE > 0) -> True)
   where
     MINCORE_INCORE = Residency _MINCORE_INCORE
 
+-- | Page has been referenced by us.
 pattern MINCORE_REFERENCED :: Residency
 pattern MINCORE_REFERENCED <-
-  ((\r -> unResidency r .&. _MINCORE_REFERENCED > 0) -> True)
+  ((\(Residency c) -> c .&. _MINCORE_REFERENCED > 0) -> True)
   where
     MINCORE_REFERENCED = Residency _MINCORE_REFERENCED
 
+-- | Page has been modified by us.
 pattern MINCORE_MODIFIED :: Residency
 pattern MINCORE_MODIFIED <-
-  ((\r -> unResidency r .&. _MINCORE_MODIFIED > 0) -> True)
+  ((\(Residency c) -> c .&. _MINCORE_MODIFIED > 0) -> True)
   where
     MINCORE_MODIFIED = Residency _MINCORE_MODIFIED
 
+-- | Page has been referenced.
 pattern MINCORE_REFERENCED_OTHER :: Residency
 pattern MINCORE_REFERENCED_OTHER <-
-  ((\r -> unResidency r .&. _MINCORE_REFERENCED_OTHER > 0) -> True)
+  ((\(Residency c) -> c .&. _MINCORE_REFERENCED_OTHER > 0) -> True)
   where
     MINCORE_REFERENCED_OTHER = Residency _MINCORE_REFERENCED_OTHER
 
+-- | Page has been modified.
 pattern MINCORE_MODIFIED_OTHER :: Residency
 pattern MINCORE_MODIFIED_OTHER <-
-  ((\r -> unResidency r .&. _MINCORE_MODIFIED_OTHER > 0) -> True)
+  ((\(Residency c) -> c .&. _MINCORE_MODIFIED_OTHER > 0) -> True)
   where
     MINCORE_MODIFIED_OTHER = Residency _MINCORE_MODIFIED_OTHER
 
@@ -147,35 +162,7 @@ _MINCORE_REFERENCED_OTHER, _MINCORE_MODIFIED_OTHER :: CUChar
 _MINCORE_REFERENCED_OTHER = {# const MINCORE_REFERENCED_OTHER #}
 _MINCORE_MODIFIED_OTHER = {# const MINCORE_MODIFIED_OTHER #}
 
-mmap
-  :: Ptr a
-  -> CSize
-  -> Protection
-  -> Sharing
-  -> Fd
-  -> COff
-  -> IO (Ptr a)
-mmap ptr size protection sharing fd offset = do
-  p <- throwErrnoIf (== _MAP_FAILED) "mmap" $
-    {# call mmap as _mmap #}
-      (castPtr ptr)
-      (fromIntegral size)
-      (unProtection protection)
-      (unSharing sharing)
-      (fromIntegral fd)
-      (fromIntegral offset)
-  return $! castPtr p
-
-foreign import capi "sys/mman.h value MAP_FAILED" _MAP_FAILED :: Ptr a
-
-munmap
-  :: Ptr a
-  -> CSize
-  -> IO ()
-munmap ptr size = throwErrnoIfMinus1_ "munmap" $
-  {# call munmap as _munmap #} (castPtr ptr) (fromIntegral size)
-
-newtype Advice = Advice { unAdvice :: CInt } deriving (Eq, Show)
+newtype Advice = Advice CInt deriving (Eq, Show)
 
 pattern MADV_NORMAL :: Advice
 pattern MADV_NORMAL = Advice {# const MADV_NORMAL #}
@@ -198,7 +185,7 @@ pattern MADV_FREE = Advice {# const MADV_FREE #}
 pattern MADV_ZERO_WIRED_PAGES :: Advice
 pattern MADV_ZERO_WIRED_PAGES = Advice {# const MADV_ZERO_WIRED_PAGES #}
 
-newtype PosixAdvice = PosixAdvice { unPosixAdvice :: CInt } deriving (Eq, Show)
+newtype PosixAdvice = PosixAdvice CInt deriving (Eq, Show)
 
 pattern POSIX_MADV_NORMAL :: PosixAdvice
 pattern POSIX_MADV_NORMAL = PosixAdvice {# const POSIX_MADV_NORMAL #}
@@ -215,18 +202,97 @@ pattern POSIX_MADV_WILLNEED = PosixAdvice {# const POSIX_MADV_WILLNEED #}
 pattern POSIX_MADV_DONTNEED :: PosixAdvice
 pattern POSIX_MADV_DONTNEED = PosixAdvice {# const POSIX_MADV_DONTNEED #}
 
-madvise :: Ptr a -> CSize -> Advice -> IO ()
-madvise ptr size advice =
-  throwErrnoIfMinus1_ "madvise" $
-    {# call madvise as _madvise #}
-      (castPtr ptr) (fromIntegral size) (unAdvice advice)
+newtype SyncFlags = SyncFlags CInt
 
+-- | Return immediately. This flag is not permitted to be combined with other
+-- flags.
+pattern MS_ASYNC :: SyncFlags
+pattern MS_ASYNC <- ((\(SyncFlags n) -> n .&. _MS_ASYNC > 0) -> True)
+  where
+    MS_ASYNC = SyncFlags _MS_ASYNC
+
+-- | Perform synchronous writes.
+pattern MS_SYNC :: SyncFlags
+pattern MS_SYNC <- ((\(SyncFlags n) -> n .&. _MS_SYNC > 0) -> True)
+  where
+    MS_SYNC = SyncFlags _MS_SYNC
+
+-- | Invalidate all cached data.
+pattern MS_INVALIDATE :: SyncFlags
+pattern MS_INVALIDATE <- ((\(SyncFlags n) -> n .&. _MS_INVALIDATE > 0) -> True)
+  where
+    MS_INVALIDATE = SyncFlags _MS_INVALIDATE
+
+_MS_ASYNC, _MS_SYNC, _MS_INVALIDATE :: CInt
+_MS_ASYNC = {# const MS_ASYNC #}
+_MS_SYNC = {# const MS_SYNC #}
+_MS_INVALIDATE = {# const MS_INVALIDATE #}
+
+-- | @mmap(2)@. Allocate memory, or map files or devices into memory.
+mmap
+  :: Ptr a
+  -> CSize
+  -> Protection
+  -> MapFlags
+  -> Fd
+  -> COff
+  -> IO (Ptr a)
+mmap ptr size (Protection prot) (MapFlags flags) fd offset = do
+  p <- throwErrnoIf (== _MAP_FAILED) "mmap" $
+    {# call mmap as _mmap #}
+      (castPtr ptr)
+      (fromIntegral size)
+      prot
+      flags
+      (fromIntegral fd)
+      (fromIntegral offset)
+  return $! castPtr p
+
+foreign import capi "sys/mman.h value MAP_FAILED" _MAP_FAILED :: Ptr a
+
+-- | @munmap(2)@. Remove a mapping.
+munmap
+  :: Ptr a
+  -> CSize
+  -> IO ()
+munmap ptr size = throwErrnoIfMinus1_ "munmap" $
+  {# call munmap as _munmap #} (castPtr ptr) (fromIntegral size)
+
+-- | @madvise(2)@. Give advice about use of memory.
+madvise :: Ptr a -> CSize -> Advice -> IO ()
+madvise ptr size (Advice advice) =
+  throwErrnoIfMinus1_ "madvise" $
+    {# call madvise as _madvise #} (castPtr ptr) (fromIntegral size) advice
+
+-- | 'posixMadvise' behaves same as 'madvise' except that it uses values with
+-- 'PosixAdvice' for the advice system call argument.
 posixMadvise :: Ptr a -> CSize -> PosixAdvice -> IO ()
-posixMadvise ptr size advice =
+posixMadvise ptr size (PosixAdvice advice) =
   throwErrnoIfMinus1_ "posix_madvise" $
     {# call posix_madvise as _posix_madvise #}
-      (castPtr ptr) (fromIntegral size) (unPosixAdvice advice)
+      (castPtr ptr) (fromIntegral size) advice
 
+-- | @mlock(2)@. Lock physical pages in memory.
+mlock :: Ptr a -> CSize -> IO ()
+mlock ptr size = throwErrnoIfMinus1_ "mlock" $
+  {# call mlock as _mlock #} (castPtr ptr) (fromIntegral size)
+
+-- | @munlock(2)@. Unlock physical pages in memory.
+munlock :: Ptr a -> CSize -> IO ()
+munlock ptr size = throwErrnoIfMinus1_ "munlock" $
+  {# call munlock as _munlock #} (castPtr ptr) (fromIntegral size)
+
+-- | @mprotect(2)@. Control the protection of pages.
+mprotect :: Ptr a -> CSize -> Protection -> IO ()
+mprotect ptr size (Protection prot) = throwErrnoIfMinus1_ "mprotect" $
+  {# call mprotect as _mprotect #} (castPtr ptr) (fromIntegral size) prot
+
+-- | @msync(2)@. Synchronize a mapped region.
+msync :: Ptr a -> CSize -> SyncFlags -> IO ()
+msync ptr size (SyncFlags flags) = throwErrnoIfMinus1_ "msync" $
+  {# call msync as _msync #} (castPtr ptr) (fromIntegral size) flags
+
+-- | @mincore(2)@. Determine residency of memory pages.
 mincore :: Ptr a -> CSize -> IO (Vector Residency)
 mincore ptr size = do
   pageSize <- {# call sysconf #} {# const _SC_PAGESIZE #}
@@ -237,44 +303,3 @@ mincore ptr size = do
       {# call mincore as _mincore #}
         (castPtr ptr) (fromIntegral size) (castPtr p)
   return $! V.unsafeFromForeignPtr0 fptr pages
-
-mlock :: Ptr a -> CSize -> IO ()
-mlock ptr size = throwErrnoIfMinus1_ "mlock" $
-  {# call mlock as _mlock #} (castPtr ptr) (fromIntegral size)
-
-munlock :: Ptr a -> CSize -> IO ()
-munlock ptr size = throwErrnoIfMinus1_ "munlock" $
-  {# call munlock as _munlock #} (castPtr ptr) (fromIntegral size)
-
-mprotect :: Ptr a -> CSize -> Protection -> IO ()
-mprotect ptr size protection = throwErrnoIfMinus1_ "mprotect" $
-  {# call mprotect as _mprotect #}
-    (castPtr ptr) (fromIntegral size) (unProtection protection)
-
-newtype SyncFlags = SyncFlags { unSyncFlags :: CInt }
-
-pattern MS_ASYNC :: SyncFlags
-pattern MS_ASYNC <- ((\flags -> unSyncFlags flags .&. _MS_ASYNC > 0) -> True)
-  where
-    MS_ASYNC = SyncFlags _MS_ASYNC
-
-pattern MS_SYNC :: SyncFlags
-pattern MS_SYNC <- ((\flags -> unSyncFlags flags .&. _MS_SYNC > 0) -> True)
-  where
-    MS_SYNC = SyncFlags _MS_SYNC
-
-pattern MS_INVALIDATE :: SyncFlags
-pattern MS_INVALIDATE <-
-  ((\flags -> unSyncFlags flags .&. _MS_INVALIDATE > 0) -> True)
-  where
-    MS_INVALIDATE = SyncFlags _MS_INVALIDATE
-
-_MS_ASYNC, _MS_SYNC, _MS_INVALIDATE :: CInt
-_MS_ASYNC = {# const MS_ASYNC #}
-_MS_SYNC = {# const MS_SYNC #}
-_MS_INVALIDATE = {# const MS_INVALIDATE #}
-
-msync :: Ptr a -> CSize -> SyncFlags -> IO ()
-msync ptr size flags = throwErrnoIfMinus1_ "msync" $
-  {# call msync as _msync #}
-    (castPtr ptr) (fromIntegral size) (unSyncFlags flags)
