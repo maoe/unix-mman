@@ -20,10 +20,25 @@ module System.Posix.MemoryManagement
   , pattern PROT_WRITE
   , pattern PROT_EXEC
 
-  , Sharing(..)
+  , Sharing
+  , pattern MAP_SHARED
+  , pattern MAP_PRIVATE
 
-  , Advice(..)
-  , PosixAdvice(..)
+  , Advice
+  , pattern MADV_NORMAL
+  , pattern MADV_SEQUENTIAL
+  , pattern MADV_RANDOM
+  , pattern MADV_WILLNEED
+  , pattern MADV_DONTNEED
+  , pattern MADV_FREE
+  , pattern MADV_ZERO_WIRED_PAGES
+
+  , PosixAdvice
+  , pattern POSIX_MADV_NORMAL
+  , pattern POSIX_MADV_SEQUENTIAL
+  , pattern POSIX_MADV_RANDOM
+  , pattern POSIX_MADV_WILLNEED
+  , pattern POSIX_MADV_DONTNEED
 
   , Residency
   , pattern MINCORE_INCORE
@@ -80,14 +95,13 @@ _PROT_READ = {# const PROT_READ #}
 _PROT_WRITE = {# const PROT_WRITE #}
 _PROT_EXEC = {# const PROT_EXEC #}
 
-{# enum define Sharing
-  { MAP_SHARED as MAP_SHARED
-  , MAP_PRIVATE as MAP_PRIVATE
-  } deriving (Eq, Show)
-  #}
+newtype Sharing = Sharing { unSharing :: CInt } deriving (Eq, Show)
 
-unSharing :: Sharing -> CInt
-unSharing = fromIntegral . fromEnum
+pattern MAP_SHARED :: Sharing
+pattern MAP_SHARED = Sharing {# const MAP_SHARED #}
+
+pattern MAP_PRIVATE :: Sharing
+pattern MAP_PRIVATE = Sharing {# const MAP_PRIVATE #}
 
 newtype Residency = Residency { unResidency :: CUChar } deriving Storable
 
@@ -161,37 +175,57 @@ munmap
 munmap ptr size = throwErrnoIfMinus1_ "munmap" $
   {# call munmap as _munmap #} (castPtr ptr) (fromIntegral size)
 
-{# enum define Advice
-  { MADV_NORMAL as MADV_NORMAL
-  , MADV_SEQUENTIAL as MADV_SEQUENTIAL
-  , MADV_RANDOM as MADV_RANDOM
-  , MADV_WILLNEED as MADV_WILLNEED
-  , MADV_DONTNEED as MADV_DONTNEED
-  , MADV_FREE as MADV_FREE
-  , MADV_ZERO_WIRED_PAGES as MADV_ZERO_WIRED_PAGES
-  } deriving (Eq, Show)
-  #}
+newtype Advice = Advice { unAdvice :: CInt } deriving (Eq, Show)
 
-{# enum define PosixAdvice
-  { POSIX_MADV_NORMAL as POSIX_MADV_NORMAL
-  , POSIX_MADV_SEQUENTIAL as POSIX_MADV_SEQUENTIAL
-  , POSIX_MADV_RANDOM as POSIX_MADV_RANDOM
-  , POSIX_MADV_WILLNEED as POSIX_MADV_WILLNEED
-  , POSIX_MADV_DONTNEED as POSIX_MADV_DONTNEED
-  } deriving (Eq, Show)
-  #}
+pattern MADV_NORMAL :: Advice
+pattern MADV_NORMAL = Advice {# const MADV_NORMAL #}
+
+pattern MADV_SEQUENTIAL :: Advice
+pattern MADV_SEQUENTIAL = Advice {# const MADV_SEQUENTIAL #}
+
+pattern MADV_RANDOM :: Advice
+pattern MADV_RANDOM = Advice {# const MADV_RANDOM #}
+
+pattern MADV_WILLNEED :: Advice
+pattern MADV_WILLNEED = Advice {# const MADV_WILLNEED #}
+
+pattern MADV_DONTNEED :: Advice
+pattern MADV_DONTNEED = Advice {# const MADV_DONTNEED #}
+
+pattern MADV_FREE :: Advice
+pattern MADV_FREE = Advice {# const MADV_FREE #}
+
+pattern MADV_ZERO_WIRED_PAGES :: Advice
+pattern MADV_ZERO_WIRED_PAGES = Advice {# const MADV_ZERO_WIRED_PAGES #}
+
+newtype PosixAdvice = PosixAdvice { unPosixAdvice :: CInt } deriving (Eq, Show)
+
+pattern POSIX_MADV_NORMAL :: PosixAdvice
+pattern POSIX_MADV_NORMAL = PosixAdvice {# const POSIX_MADV_NORMAL #}
+
+pattern POSIX_MADV_SEQUENTIAL :: PosixAdvice
+pattern POSIX_MADV_SEQUENTIAL = PosixAdvice {# const POSIX_MADV_SEQUENTIAL #}
+
+pattern POSIX_MADV_RANDOM :: PosixAdvice
+pattern POSIX_MADV_RANDOM = PosixAdvice {# const POSIX_MADV_RANDOM #}
+
+pattern POSIX_MADV_WILLNEED :: PosixAdvice
+pattern POSIX_MADV_WILLNEED = PosixAdvice {# const POSIX_MADV_WILLNEED #}
+
+pattern POSIX_MADV_DONTNEED :: PosixAdvice
+pattern POSIX_MADV_DONTNEED = PosixAdvice {# const POSIX_MADV_DONTNEED #}
 
 madvise :: Ptr a -> CSize -> Advice -> IO ()
 madvise ptr size advice =
   throwErrnoIfMinus1_ "madvise" $
     {# call madvise as _madvise #}
-      (castPtr ptr) (fromIntegral size) (fromIntegral (fromEnum advice))
+      (castPtr ptr) (fromIntegral size) (unAdvice advice)
 
 posixMadvise :: Ptr a -> CSize -> PosixAdvice -> IO ()
 posixMadvise ptr size advice =
   throwErrnoIfMinus1_ "posix_madvise" $
     {# call posix_madvise as _posix_madvise #}
-      (castPtr ptr) (fromIntegral size) (fromIntegral (fromEnum advice))
+      (castPtr ptr) (fromIntegral size) (unPosixAdvice advice)
 
 mincore :: Ptr a -> CSize -> IO (Vector Residency)
 mincore ptr size = do
