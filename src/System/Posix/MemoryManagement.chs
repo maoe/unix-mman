@@ -107,9 +107,11 @@ newtype MapFlags = MapFlags CInt deriving (Eq, Show)
 
 -- POSIX.1-2001 flags
 
+-- | Modifications are shared.
 pattern MAP_SHARED :: MapFlags
 pattern MAP_SHARED = MapFlags {# const MAP_SHARED #}
 
+-- | Modifications are private (copy-on-write).
 pattern MAP_PRIVATE :: MapFlags
 pattern MAP_PRIVATE = MapFlags {# const MAP_PRIVATE #}
 
@@ -164,41 +166,62 @@ _MINCORE_MODIFIED_OTHER = {# const MINCORE_MODIFIED_OTHER #}
 
 newtype Advice = Advice CInt deriving (Eq, Show)
 
+-- | Indicates that the application has no advice to give on its behavior in
+-- the specified address range. This is the system default behavior.ｓ
 pattern MADV_NORMAL :: Advice
 pattern MADV_NORMAL = Advice {# const MADV_NORMAL #}
 
+-- | Indicates that the application expects to access this address range in a
+-- sequential manner.
 pattern MADV_SEQUENTIAL :: Advice
 pattern MADV_SEQUENTIAL = Advice {# const MADV_SEQUENTIAL #}
 
+-- | Indicates that the application expects to access this address range in a
+-- random manner.
 pattern MADV_RANDOM :: Advice
 pattern MADV_RANDOM = Advice {# const MADV_RANDOM #}
 
+-- | Indicates that the application expects to access this address range soon.
 pattern MADV_WILLNEED :: Advice
 pattern MADV_WILLNEED = Advice {# const MADV_WILLNEED #}
 
+-- | Indicates that the application is not expecting to access this address
+-- range soon.
 pattern MADV_DONTNEED :: Advice
 pattern MADV_DONTNEED = Advice {# const MADV_DONTNEED #}
 
+-- | Indicates that the application will not need the information contained in
+-- this address range, so the pages may be reused right away. The address
+-- range will remain valid.
 pattern MADV_FREE :: Advice
 pattern MADV_FREE = Advice {# const MADV_FREE #}
 
+-- | Indicates that the application would like the wired pages in this address
+-- range to be zeroed out if the address range is deallocated without first
+-- unwiring the pages (i.e. a 'munmap' without a preceding 'munlock' or
+-- the application quits).
 pattern MADV_ZERO_WIRED_PAGES :: Advice
 pattern MADV_ZERO_WIRED_PAGES = Advice {# const MADV_ZERO_WIRED_PAGES #}
 
 newtype PosixAdvice = PosixAdvice CInt deriving (Eq, Show)
 
+-- | Same as 'MADV_NORMAL'.
 pattern POSIX_MADV_NORMAL :: PosixAdvice
 pattern POSIX_MADV_NORMAL = PosixAdvice {# const POSIX_MADV_NORMAL #}
 
+-- | Same as 'MADV_SEQUENTIAL'.
 pattern POSIX_MADV_SEQUENTIAL :: PosixAdvice
 pattern POSIX_MADV_SEQUENTIAL = PosixAdvice {# const POSIX_MADV_SEQUENTIAL #}
 
+-- | Same as 'MADV_RANDOM'.
 pattern POSIX_MADV_RANDOM :: PosixAdvice
 pattern POSIX_MADV_RANDOM = PosixAdvice {# const POSIX_MADV_RANDOM #}
 
+-- | Same as 'MADV_WILLNEED'.
 pattern POSIX_MADV_WILLNEED :: PosixAdvice
 pattern POSIX_MADV_WILLNEED = PosixAdvice {# const POSIX_MADV_WILLNEED #}
 
+-- | Same as 'MADV_DONTNEED'.
 pattern POSIX_MADV_DONTNEED :: PosixAdvice
 pattern POSIX_MADV_DONTNEED = PosixAdvice {# const POSIX_MADV_DONTNEED #}
 
